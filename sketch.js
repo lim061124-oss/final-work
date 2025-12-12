@@ -1,148 +1,136 @@
-let particles = [];
-let planet;
-let numParticles = 400;
-let targetX; // The "winning" mouse position
+let sim;
 
 function setup() {
   createCanvas(800, 600);
-  
-  // Create particles with different group IDs (0, 1, 2)
-  for (let i = 0; i < numParticles; i++) {
-    particles.push(new Particle(random(width), random(height), int(random(3))));
-  }
-  
-  // Create the central attractor (Planet)
-  planet = new Attractor(width / 2, height / 2);
-  
-  // The target is the center of the screen
-  targetX = width / 2;
-  
-  textSize(16);
-  textAlign(CENTER);
+  sim = new Simulation();
 }
 
 function draw() {
-  // Trail effect
-  background(10, 10, 20, 50);
-  
-  // Draw the planet
-  planet.display();
-  
-  // Calculate the "tuning" offset based on Mouse X
-  // We want 0 offset at the center of the screen.
-  // The scale determines how sensitive the "tuning" is.
-  let offset = (mouseX - targetX) * 0.05;
-
-  // Calculate Force Multipliers for 3 distinct groups using Cosine waves
-  // When offset is 0 (Mouse at center), cos(0) is 1 (Max Attraction)
-  // When offset deviates, values oscillate between -1 (Repel) and 1 (Attract) at different frequencies
-  let forceFactors = [
-    cos(offset * 0.5),   // Group 0: Slow frequency
-    cos(offset * 1.2),   // Group 1: Medium frequency
-    cos(offset * 2.5)    // Group 2: High frequency
-  ];
-
-  let gameSolved = abs(mouseX - targetX) < 10;
-
-  for (let p of particles) {
-    // 1. Calculate base attraction force from planet
-    let force = planet.calculateForce(p);
-    
-    // 2. Modify force based on particle group and mouse position
-    // If factor is positive: Attract. If negative: Repel.
-    let modifier = forceFactors[p.groupId];
-    
-    // Enhance the effect for gameplay feel
-    force.mult(modifier * 2); 
-    
-    // If we are repelling (modifier < 0), make it stronger to push them away visibly
-    if (modifier < 0) force.mult(2);
-
-    // 3. Apply physics
-    p.applyForce(force);
-    
-    // Add a bit of friction so they settle into rings/clouds instead of orbiting forever chaotically
-    // Friction is lower when "solved" to allow nice orbiting
-    p.update(gameSolved ? 0.99 : 0.94); 
-    p.checkEdges();
-    p.display();
-  }
-  
-  // UI & Game Logic
-  drawUI(forceFactors, gameSolved);
+  sim.update();
+  sim.render();
 }
 
-function drawUI(factors, solved) {
-  fill(255);
-  noStroke();
-  
-  if (solved) {
-    fill(100, 255, 100);
-    text("SYSTEM SYNCHRONIZED: PLANETARY RINGS FORMED", width/2, height - 30);
-    stroke(100, 255, 100, 100);
-    noFill();
-    ellipse(width/2, height/2, 250, 250); // Victory Ring
-  } else {
-    fill(200);
-    text("Move Mouse X to synchronize particle frequencies.", width/2, height - 50);
-    text("Find the sweet spot to attract ALL particles.", width/2, height - 30);
+/* -------------------------------------------------
+   Simulation
+---------------------------------------------------*/
+class Simulation {
+  constructor() {
+    this.numParticles = 400;
+    this.centerX = width / 2;
+
+    // Planet: 중심 어트렉터
+    this.planet = new Attractor(width / 2, height / 2, 20);
+
+    // 그룹별 코사인 힘 조절기
+    this.groupForce = new GroupForceController();
+
+    // 파티클 생성
+    this.particles = [];
+    for (let i = 0; i < this.numParticles; i++) {
+      this.particles.push(new Particle(random(width), random(height), int(random(3))));
+    }
   }
-  
-  // Visual debug for the forces (Top left)
-  let barWidth = 100;
-  for(let i=0; i<3; i++) {
-    let val = factors[i];
-    let col = getGroupColor(i);
-    fill(col);
+
+  update() {
+    background(10, 10, 20, 50);
+
+    let offset = (mouseX - this.centerX) * 0.05;
+    let forceFactors = this.groupForce.getFactors(offset);
+
+    let solved = abs(mouseX - this.centerX) < 10;
+
+    for (let p of this.particles) {
+      let baseForce = this.planet.calculateForce(p);
+      let modifier = forceFactors[p.groupId];
+
+      // attraction or repulsion
+      let finalForce = p5.Vector.mult(baseForce, modifier * 2);
+      if (modifier < 0) finalForce.mult(2); // repulsion 강화
+
+      p.applyForce(finalForce);
+      p.update(solved ? 0.99 : 0.94);
+      p.checkEdges();
+    }
+  }
+
+  render() {
+    this.planet.display();
+    for (let p of this.particles) p.display();
+
+    this.drawUI();
+  }
+
+  drawUI() {
+    fill(255);
     noStroke();
-    text(val > 0 ? "Attract" : "Repel", 60, 35 + i * 20);
-    
-    // Bar
-    noFill();
-    stroke(col);
-    rect(100, 25 + i * 20, barWidth, 10);
-    
-    noStroke();
-    fill(val > 0 ? color(255, 255, 255) : color(255, 100, 100));
-    // Map -1..1 to 0..width
-    let barX = map(val, -1, 1, 0, barWidth);
-    rect(100, 25 + i * 20, barX, 10);
+
+    let solved = abs(mouseX - this.centerX) < 10;
+
+    if (solved) {
+      fill(100, 255, 100);
+      text("SYSTEM SYNCHRONIZED: PLANETARY RINGS FORMED", width / 2, height - 30);
+
+      stroke(100, 255, 100, 100);
+      noFill();
+      ellipse(width/2, height/2, 250, 250);
+
+    } else {
+      fill(200);
+      text("Move Mouse X to synchronize particle frequencies.", width/2, height - 50);
+      text("Find the sweet spot to attract ALL particles.", width/2, height - 30);
+    }
   }
 }
 
-function getGroupColor(id) {
-  if (id === 0) return color(255, 50, 50);    // Red
-  if (id === 1) return color(50, 255, 50);    // Green
-  if (id === 2) return color(50, 150, 255);   // Blue
-  return color(255);
+/* -------------------------------------------------
+   Group Force Controller (Cosine 기반)
+---------------------------------------------------*/
+class GroupForceController {
+  constructor() {
+    this.frequencies = [0.5, 1.2, 2.5];
+  }
+
+  getFactors(offset) {
+    return this.frequencies.map(freq => cos(offset * freq));
+  }
 }
 
-// --- Classes ---
-
-class Attractor {
-  constructor(x, y) {
+/* -------------------------------------------------
+   ForceField 기반 클래스
+---------------------------------------------------*/
+class ForceField {
+  constructor(x, y, mass, isRepeller = false) {
     this.pos = createVector(x, y);
-    this.mass = 20;
-    this.G = 1.5; // Gravitational Constant
-    this.r = 30; // Radius for drawing
+    this.mass = mass;
+    this.G = 1.5;
+    this.isRepeller = isRepeller;
   }
 
   calculateForce(p) {
-    // F = G * (m1 * m2) / dist^2
     let force = p5.Vector.sub(this.pos, p.pos);
-    let distance = force.mag();
-    // Constrain distance to avoid singularity (shooting off to infinity)
-    distance = constrain(distance, 5, 25); 
-    
+    let dist = constrain(force.mag(), 5, 25);
+
     force.normalize();
-    let strength = (this.G * this.mass * p.mass) / (distance * distance);
+
+    let strength = (this.G * this.mass * p.mass) / (dist * dist);
+    if (this.isRepeller) strength *= -1;
+
     force.mult(strength);
     return force;
+  }
+}
+
+/* -------------------------------------------------
+   Attractor / Repeller
+---------------------------------------------------*/
+class Attractor extends ForceField {
+  constructor(x, y, mass) {
+    super(x, y, mass, false);
+    this.r = 30;
   }
 
   display() {
     noStroke();
-    // Glow
     for (let i = 5; i > 0; i--) {
       fill(255, 200, 100, 20);
       ellipse(this.pos.x, this.pos.y, this.r * 2 + i * 10);
@@ -152,54 +140,53 @@ class Attractor {
   }
 }
 
+class Repeller extends ForceField {
+  constructor(x, y, mass) {
+    super(x, y, mass, true);
+  }
+}
+
+/* -------------------------------------------------
+   Particle
+---------------------------------------------------*/
 class Particle {
   constructor(x, y, groupId) {
     this.pos = createVector(x, y);
     this.vel = createVector(random(-1, 1), random(-1, 1));
     this.acc = createVector(0, 0);
     this.mass = 1;
-    this.groupId = groupId; // Determines which frequency affects this particle
-    this.color = getGroupColor(groupId);
-    this.history = [];
+    this.groupId = groupId;
+    this.color = this.getColor(groupId);
   }
 
-  applyForce(force) {
-    let f = p5.Vector.div(force, this.mass);
-    this.acc.add(f);
+  applyForce(f) {
+    this.acc.add(p5.Vector.div(f, this.mass));
   }
 
   update(friction) {
     this.vel.add(this.acc);
-    this.vel.mult(friction); // Damping to stabilize orbits
+    this.vel.mult(friction);
     this.pos.add(this.vel);
-    this.acc.mult(0); // Reset acceleration
+    this.acc.mult(0);
   }
 
   checkEdges() {
-    // Constraint: Keep repulsion within screen boundaries
-    // If they hit the wall, bounce them back
-    let buffer = 10;
-    
-    if (this.pos.x > width - buffer) {
-      this.pos.x = width - buffer;
-      this.vel.x *= -0.8;
-    } else if (this.pos.x < buffer) {
-      this.pos.x = buffer;
-      this.vel.x *= -0.8;
-    }
-
-    if (this.pos.y > height - buffer) {
-      this.pos.y = height - buffer;
-      this.vel.y *= -0.8;
-    } else if (this.pos.y < buffer) {
-      this.pos.y = buffer;
-      this.vel.y *= -0.8;
-    }
+    let b = 10;
+    if (this.pos.x > width - b) { this.pos.x = width - b; this.vel.x *= -0.8; }
+    if (this.pos.x < b) { this.pos.x = b; this.vel.x *= -0.8; }
+    if (this.pos.y > height - b) { this.pos.y = height - b; this.vel.y *= -0.8; }
+    if (this.pos.y < b) { this.pos.y = b; this.vel.y *= -0.8; }
   }
 
   display() {
     noStroke();
     fill(this.color);
     ellipse(this.pos.x, this.pos.y, 4, 4);
+  }
+
+  getColor(id) {
+    return id === 0 ? color(255, 50, 50) :
+           id === 1 ? color(50, 255, 50) :
+                       color(50, 150, 255);
   }
 }
