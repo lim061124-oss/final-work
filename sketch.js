@@ -1,3 +1,4 @@
+console.log("SKETCH LOADED");
 let system;
 let forceController;
 
