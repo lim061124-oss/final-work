@@ -10,10 +10,8 @@ class Attractor {
     let force = p5.Vector.sub(this.pos, p.pos);
     let dist = constrain(force.mag(), 5, 25);
     force.normalize();
-
     let strength = (this.G * this.mass * p.mass) / (dist * dist);
     force.mult(strength);
-
     return force;
   }
 

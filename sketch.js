@@ -1,28 +1,16 @@
-console.log("SKETCH LOADED");
-let system;
-let forceController;
+let system, controller;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-
-  forceController = new ForceController();
-  system = new ParticleSystem(forceController);
-
-  system.setCentralAttractor(new Attractor(width / 2, height / 2, 20));
-
-  textSize(16);
-  textAlign(CENTER);
+  controller = new ForceController();
+  system = new ParticleSystem(controller);
+  system.setAttractor(new Attractor(width / 2, height / 2, 20));
 }
 
 function draw() {
-  background(10, 10, 20, 50);
-
-  // Mouse offset 로 주파수 변화
-  let offset = (mouseX - width / 2) * 0.05;
-  forceController.update(offset);
-
+  background(0);
+  controller.update((mouseX - width / 2) * 0.05);
   system.update();
   system.display();
-
-  drawUI(forceController.modifiers);
+  drawUI(controller.modifiers);
 }

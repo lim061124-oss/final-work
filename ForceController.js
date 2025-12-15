@@ -5,7 +5,7 @@ class ForceController {
   }
 
   update(offset) {
-    this.modifiers = this.frequencies.map(freq => cos(offset * freq));
+    this.modifiers = this.frequencies.map(f => cos(offset * f));
   }
 
   getModifier(id) {
