@@ -28,6 +28,6 @@ class Particle {
   display() {
     noStroke();
     fill(this.color);
-    ellipse(this.pos.x, this.pos.y, 4, 4);
+    ellipse(this.pos.x, this.pos.y, 7, 7);
   }
 }
