@@ -15,3 +15,9 @@ function draw() {
   system.display();
   drawUI(controller.modifiers);
 }
+
+function getGroupColor(id) {
+  if (id === 0) return color(280, 60, 90, 80); 
+  if (id === 1) return color(220, 65, 95, 80); 
+  if (id === 2) return color(195, 55, 100, 80); 
+}
