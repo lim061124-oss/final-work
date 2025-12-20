@@ -27,7 +27,7 @@ class ParticleSystem {
 
       if (solved) {
         let dir = p5.Vector.sub(p.pos, this.central.pos);
-        let tan = createVector(-dir.y, dir.x).setMag(0.05);
+        let tan = createVector(-dir.y, dir.x).setMag(0.0);
         p.applyForce(tan);
       }
 
