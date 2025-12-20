@@ -9,7 +9,7 @@ function setup() {
 }
 
 function draw() {
-  background(0);
+  background(230, 50, 5, 20);
   controller.update((mouseX - width / 2) * 0.05);
   system.update();
   system.display();
