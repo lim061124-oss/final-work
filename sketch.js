@@ -1,6 +1,7 @@
 let system, controller;
 
 function setup() {
+  colorMode(HSB, 360, 100, 100, 100);
   createCanvas(windowWidth, windowHeight);
   controller = new ForceController();
   system = new ParticleSystem(controller);
